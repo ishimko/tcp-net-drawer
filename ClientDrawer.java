@@ -6,9 +6,9 @@ public class ClientDrawer extends JPanel {
     Image image;
     Graphics imageGraphics;
     int oldX, oldY;
+    Color backgroundColor = Color.white;
 
     public ClientDrawer() {
-        setBackground(Color.WHITE);
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -33,12 +33,13 @@ public class ClientDrawer extends JPanel {
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                super.componentResized(e);
                 Image tmpImage = image;
 
-                image = createImage(getWidth(), getHeight());
+                image = newImage(getWidth(), getHeight());
                 imageGraphics = image.getGraphics();
                 imageGraphics.drawImage(tmpImage, 0, 0, null);
+
+                repaint();
             }
         });
     }
@@ -46,11 +47,22 @@ public class ClientDrawer extends JPanel {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (image != null) {
-            g.drawImage(image, 0, 0, null);
-        } else {
-            image = createImage(getWidth(), getHeight());
+        if (image == null) {
+            image = newImage(getWidth(), getHeight());
             imageGraphics = image.getGraphics();
         }
+        g.drawImage(image, 0, 0, null);
+
+
+    }
+
+    private Image newImage(int width, int height){
+        Image image = createImage(width, height);
+        Graphics g = image.getGraphics();
+        Color previousColor = g.getColor();
+        g.setColor(backgroundColor);
+        g.fillRect(0, 0, width, height);
+        g.setColor(previousColor);
+        return image;
     }
 }
