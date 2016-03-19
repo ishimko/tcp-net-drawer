@@ -3,10 +3,10 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class ClientDrawer extends JPanel {
-    Image image;
-    Graphics imageGraphics;
-    int oldX, oldY;
-    Color backgroundColor = Color.white;
+    private Image image;
+    private Graphics imageGraphics;
+    private int oldX, oldY;
+    private Color backgroundColor = Color.white;
 
     public ClientDrawer() {
         addMouseListener(new MouseAdapter() {
@@ -23,8 +23,10 @@ public class ClientDrawer extends JPanel {
                 int currentX, currentY;
                 currentX = e.getX();
                 currentY = e.getY();
+
                 imageGraphics.drawLine(oldX, oldY, currentX, currentY);
                 repaint();
+
                 oldX = currentX;
                 oldY = currentY;
             }
