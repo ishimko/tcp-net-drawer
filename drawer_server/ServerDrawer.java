@@ -34,7 +34,6 @@ public class ServerDrawer {
 
     private synchronized void removeClient(int clientID) {
         clients.remove(clientID);
-        writeLog("client removed");
     }
 
     private synchronized int addClient(ObjectOutputStream client) {
