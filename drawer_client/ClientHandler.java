@@ -28,7 +28,6 @@ class ClientHandler implements Runnable {
         while (!stopped) {
             try {
                 int[] readData = (int[]) in.readObject();
-                System.out.println("Got something");
                 int clientID = readData[0];
                 Point readPoint = new Point(readData[1], readData[2]);
 
@@ -49,6 +48,7 @@ class ClientHandler implements Runnable {
 
         {
             clientSocket.close();
+            System.out.println("Socket closed");
         } catch (
                 IOException e
                 )
@@ -60,7 +60,6 @@ class ClientHandler implements Runnable {
     }
 
     void sendPoint(Point p) throws IOException {
-        System.out.println("Sending point");
         int[] dataToSend = new int[2];
         dataToSend[0] = p.x;
         dataToSend[1] = p.y;
@@ -75,6 +74,5 @@ class ClientHandler implements Runnable {
     public void stop() {
         stopped = true;
     }
-
 
 }

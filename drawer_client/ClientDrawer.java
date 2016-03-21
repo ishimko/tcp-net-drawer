@@ -40,10 +40,14 @@ public class ClientDrawer extends JPanel {
                                  public void componentResized(ComponentEvent e) {
                                      Image tmpImage = image;
 
-                                     newImage(getWidth(), getHeight());
-                                     imageGraphics.drawImage(tmpImage, 0, 0, null);
+                                     int height = getHeight();
+                                     int width = getWidth();
 
-                                     repaint();
+                                     if (height > 0 && width > 0) {
+                                         newImage(width, height);
+                                         imageGraphics.drawImage(tmpImage, 0, 0, null);
+                                         repaint();
+                                     }
                                  }
                              }
 
@@ -122,5 +126,9 @@ public class ClientDrawer extends JPanel {
     public void connect(InetAddress ip, int port) throws IOException {
         clientHandler = new ClientHandler(ip, this, port);
         new Thread(clientHandler).start();
+    }
+
+    public void disconnect() throws IOException{
+        clientHandler.stop();
     }
 }
