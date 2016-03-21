@@ -49,11 +49,7 @@ class ClientHandler implements Runnable {
         {
             clientSocket.close();
             System.out.println("Socket closed");
-        } catch (
-                IOException e
-                )
-
-        {
+        } catch (IOException e) {
             System.out.println("Error while closing socket: " + e);
         }
 
