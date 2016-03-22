@@ -53,7 +53,7 @@ class ClientHandler implements Runnable {
         out.flush();
     }
 
-    synchronized void processMessage(DrawerMessage drawerMessage){
+    private synchronized void processMessage(DrawerMessage drawerMessage){
         switch (drawerMessage.messageType){
             case MSG_REMOTE_POINTS_LIST:
                 drawer.processDotsList((RemotePoint[])drawerMessage.messageBody);
