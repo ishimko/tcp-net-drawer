@@ -8,10 +8,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.rmi.Remote;
 import java.util.*;
 
-import tcp_net_drawer.drawer_protocol.DrawerMessage;
 import tcp_net_drawer.drawer_protocol.Point;
 import tcp_net_drawer.drawer_protocol.RemotePoint;
 
@@ -23,8 +21,7 @@ class ClientDrawer extends JPanel {
     private Color backgroundColor = Color.white;
     private ClientHandler clientHandler;
     private boolean activated = false;
-    private int maxHeight;
-    private int maxWidth;
+    private Dimension imageDimension = new Dimension(0, 0);
 
     ClientDrawer() {
         addMouseListener(new MouseAdapter() {
@@ -50,35 +47,27 @@ class ClientDrawer extends JPanel {
         addComponentListener(new ComponentAdapter() {
                                  @Override
                                  public void componentResized(ComponentEvent event) {
-                                     resizeImage(getWidth(), getHeight());
-                                     if (clientHandler != null){
-                                         try {
-                                             clientHandler.sendImageDimension(getDimension());
-                                         } catch (IOException e){
-                                             System.err.println("Network error: " + e);
-
-                                         }
-                                     }
+                                     resizeImage(getSize());
                                  }
                              }
 
         );
     }
 
-    synchronized void resizeImage(int width, int height){
-        boolean newDimension = false;
-        if (height > maxHeight) {
-            maxHeight = height;
-            newDimension = true;
+    private synchronized void resizeImage(Dimension newDimension){
+        boolean redraw = false;
+        if (newDimension.height > imageDimension.height) {
+            imageDimension.height = newDimension.height + 2;
+            redraw = true;
         }
-        if (width > maxWidth) {
-            maxWidth = width;
-            newDimension = true;
+        if (newDimension.width > imageDimension.width) {
+            imageDimension.width = newDimension.width + 2;
+            redraw = true;
         }
 
-        if (newDimension){
+        if (redraw){
             Image tmpImage = image;
-            newImage(maxWidth, maxHeight);
+            newImage();
             imageGraphics.drawImage(tmpImage, 0, 0, null);
         }
         repaint();
@@ -101,6 +90,8 @@ class ClientDrawer extends JPanel {
             oldPoint.y = newPoint.y;
         }
 
+        resizeImage(new Dimension(newPoint.x, newPoint.y));
+
         imageGraphics.drawLine(oldPoint.x, oldPoint.y, newPoint.x, newPoint.y);
 
         oldPoint.x = newPoint.x;
@@ -109,7 +100,7 @@ class ClientDrawer extends JPanel {
         repaint();
     }
 
-    synchronized void drawRemoteDot(RemotePoint p) {
+    private synchronized void drawRemoteDot(RemotePoint p) {
         if (remotePoints.containsKey(p.clientID)) {
             drawDot(p.point, remotePoints.get(p.clientID));
         } else {
@@ -117,7 +108,7 @@ class ClientDrawer extends JPanel {
         }
     }
 
-    synchronized void processRemoteDot(RemotePoint p){
+    private synchronized void processRemoteDot(RemotePoint p){
         if (p.point.x == -1 || p.point.y == -1){
             endRemoteLine(p.clientID);
         } else {
@@ -132,7 +123,7 @@ class ClientDrawer extends JPanel {
 
     }
 
-    synchronized void endRemoteLine(int clientID) {
+    private synchronized void endRemoteLine(int clientID) {
         endLine(remotePoints.get(clientID));
     }
 
@@ -154,21 +145,21 @@ class ClientDrawer extends JPanel {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (image == null) {
-            newImage(getWidth(), getHeight());
+            newImage();
         }
         g.drawImage(image, 0, 0, null);
     }
 
-    private void newImage(int width, int height) {
-        image = createImage(width, height);
+    private void newImage() {
+        image = createImage(imageDimension.width, imageDimension.height);
         imageGraphics = image.getGraphics();
-        clear(width, height);
+        clearImage();
     }
 
-    private void clear(int width, int height) {
+    private void clearImage() {
         Color previousColor = imageGraphics.getColor();
         imageGraphics.setColor(backgroundColor);
-        imageGraphics.fillRect(0, 0, width, height);
+        imageGraphics.fillRect(0, 0, imageDimension.width, imageDimension.height);
         imageGraphics.setColor(previousColor);
 
         repaint();
@@ -185,10 +176,21 @@ class ClientDrawer extends JPanel {
 
     void setActivated(boolean activated) {
         this.activated = activated;
-        clear(getWidth(), getHeight());
+        clearImage();
     }
 
-    public Dimension getDimension(){
-        return new Dimension(maxWidth, maxHeight);
+    synchronized void localClear(){
+        remotePoints.clear();
+        localOldPoint = new Point(-1, -1);
+
+        clearImage();
+    }
+    synchronized void clear(){
+        try {
+            clientHandler.sendClearMessage();
+        } catch (IOException e){
+            System.out.println("Network error while sending localClear message: " + e);
+        }
+        localClear();
     }
 }

@@ -61,6 +61,16 @@ public class ClientWindow extends JFrame {
             }
         });
 
+        JButton btnClear = new JButton("Очистить");
+        btnClear.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (currentMode == Mode.M_CONNECTED){
+                    clientDrawer.clear();
+                }
+            }
+        });
+
         GroupLayout layout = new GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setAutoCreateGaps(true);
@@ -73,6 +83,7 @@ public class ClientWindow extends JFrame {
                                 .addComponent(edtIP, EDT_IP_WIDTH, EDT_IP_WIDTH, EDT_IP_WIDTH)
                         )
                         .addComponent(btnConnect)
+                        .addComponent(btnClear)
                 )
                 .addComponent(clientDrawer));
 
@@ -83,6 +94,7 @@ public class ClientWindow extends JFrame {
                                 .addComponent(edtIP, edtIPHeight, edtIPHeight, edtIPHeight)
                         )
                         .addComponent(btnConnect)
+                        .addComponent(btnClear)
                 )
                 .addComponent(clientDrawer));
 

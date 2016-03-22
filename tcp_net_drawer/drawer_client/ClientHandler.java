@@ -4,7 +4,6 @@ import tcp_net_drawer.drawer_protocol.DrawerMessage;
 import tcp_net_drawer.drawer_protocol.Point;
 import tcp_net_drawer.drawer_protocol.RemotePoint;
 
-import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -29,11 +28,6 @@ class ClientHandler implements Runnable {
     }
 
     public void run() {
-        try{
-            sendImageDimension(drawer.getDimension());
-        } catch (IOException e){
-            System.out.println("Error sending dimension: " + e);
-        }
         while (!stopped) {
             try {
                 processMessage((DrawerMessage)in.readObject());
@@ -53,16 +47,19 @@ class ClientHandler implements Runnable {
 
     }
 
+    synchronized void sendClearMessage() throws IOException{
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_CLEAR, null);
+        out.writeObject(message);
+        out.flush();
+    }
+
     synchronized void processMessage(DrawerMessage drawerMessage){
         switch (drawerMessage.messageType){
-            case MSG_IMAGE_SIZE:
-                Dimension d = (Dimension)drawerMessage.messageBody;
-                drawer.resizeImage(d.width, d.height);
-                //System.out.println("Dimension msg");
-                break;
             case MSG_REMOTE_POINTS_LIST:
                 drawer.processDotsList((RemotePoint[])drawerMessage.messageBody);
-                //System.out.println("Dots list msg");
+                break;
+            case MSG_CLEAR:
+                drawer.localClear();
                 break;
             default:
                 System.err.println("unknown messageBody received");
@@ -71,12 +68,6 @@ class ClientHandler implements Runnable {
 
     synchronized void sendPoint(Point p) throws IOException {
         out.writeObject(new DrawerMessage(DrawerMessage.MessageType.MSG_POINT, p));
-        out.flush();
-    }
-
-    synchronized void sendImageDimension(Dimension d) throws IOException{
-        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, d);
-        out.writeObject(message);
         out.flush();
     }
 

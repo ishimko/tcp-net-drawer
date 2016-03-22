@@ -6,7 +6,7 @@ public class DrawerMessage implements Serializable{
     public enum MessageType{
         MSG_POINT,
         MSG_REMOTE_POINTS_LIST,
-        MSG_IMAGE_SIZE
+        MSG_CLEAR
     }
 
     public MessageType messageType;

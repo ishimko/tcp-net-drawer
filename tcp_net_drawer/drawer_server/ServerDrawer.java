@@ -4,7 +4,6 @@ import tcp_net_drawer.drawer_protocol.DrawerMessage;
 import tcp_net_drawer.drawer_protocol.Point;
 import tcp_net_drawer.drawer_protocol.RemotePoint;
 
-import java.awt.*;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -22,7 +21,6 @@ public class ServerDrawer {
     private ServerSocket serverSocket;
     private volatile HashMap<Integer, ObjectOutputStream> clients = new HashMap<>();
     private volatile List<RemotePoint> drawLog = new ArrayList<>();
-    private Dimension imageSize = new Dimension(0, 0);
 
     public ServerDrawer(int port) throws IOException {
         serverSocket = new ServerSocket(port);
@@ -50,17 +48,9 @@ public class ServerDrawer {
     private synchronized int addClient(ObjectOutputStream client) throws IOException {
         int cliendID = getNewKey();
         clients.put(cliendID, client);
-        DrawerMessage message;
-
-        if (clients.size() > 1) {
-            message = new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, imageSize);
-            client.writeObject(message);
-            client.flush();
-        }
-
         RemotePoint[] points = new RemotePoint[drawLog.size()];
         drawLog.toArray(points);
-        message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, points);
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, points);
         client.writeObject(message);
         client.flush();
 
@@ -87,6 +77,16 @@ public class ServerDrawer {
         sendMessage(message, initiatorID);
     }
 
+    private synchronized void processClearMessage(int initiatorID) {
+        drawLog.clear();
+        sendClearMessage(initiatorID);
+    }
+
+    private synchronized void processNewPoint(Point p, int inittiatorID) {
+        addPointToLog(p, inittiatorID);
+        sendDot(p, inittiatorID);
+    }
+
     private synchronized void sendMessage(DrawerMessage message, int initiatorID) {
         ObjectOutputStream client;
         try {
@@ -100,11 +100,6 @@ public class ServerDrawer {
         } catch (IOException e) {
             System.err.println("Error while sending:" + e);
         }
-    }
-
-    private synchronized void sendDimension(int initiatorID) {
-        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, imageSize);
-        sendMessage(message, initiatorID);
     }
 
     private static String reprClient(Socket connection) {
@@ -137,31 +132,11 @@ public class ServerDrawer {
 
         private void processMessage(DrawerMessage message) {
             switch (message.messageType) {
-                case MSG_IMAGE_SIZE:
-                    Dimension d = (Dimension) message.messageBody;
-
-                    boolean newDimension = false;
-
-                    if (d.height > imageSize.height){
-                        imageSize.height = d.height;
-                        newDimension = true;
-                    }
-
-                    if (d.getWidth() > imageSize.width){
-                        imageSize.width = d.width;
-                        newDimension = true;
-                    }
-
-                    if (newDimension){
-                        sendDimension(clientID);
-                    }
-
-
-                    break;
                 case MSG_POINT:
-                    Point point = (Point) message.messageBody;
-                    addPointToLog(point, clientID);
-                    sendDot(point, clientID);
+                    processNewPoint((Point) message.messageBody, clientID);
+                    break;
+                case MSG_CLEAR:
+                    processClearMessage(clientID);
                     break;
                 default:
                     writeLog("unknown messageBody received");
@@ -171,12 +146,6 @@ public class ServerDrawer {
         @Override
         public void run() {
             try {
-//                synchronized (this) {
-//                    if (clients.size() > 1) {
-//                        clients.get(clientID).writeObject(new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, imageSize));
-//                        System.out.println("dimension send");
-//                    }
-//                }
                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
                 while (true) {
                     processMessage((DrawerMessage) in.readObject());
@@ -195,6 +164,10 @@ public class ServerDrawer {
                 System.err.println("Unknown class: " + e);
             }
         }
+    }
+
+    private void sendClearMessage(int initiatorID) {
+        sendMessage(new DrawerMessage(DrawerMessage.MessageType.MSG_CLEAR, null), initiatorID);
     }
 
 }
