@@ -1,6 +1,7 @@
-package drawer_client;
+package tcp_net_drawer.drawer_client;
 
-import java.awt.*;
+import tcp_net_drawer.drawer_protocol.Point;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;

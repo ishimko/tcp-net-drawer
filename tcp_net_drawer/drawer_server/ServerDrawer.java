@@ -1,6 +1,4 @@
-package drawer_server;
-
-import sun.net.ConnectionResetException;
+package tcp_net_drawer.drawer_server;
 
 import java.io.EOFException;
 import java.io.IOException;

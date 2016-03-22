@@ -1,4 +1,4 @@
-package drawer_client;
+package tcp_net_drawer.drawer_client;
 
 import javax.swing.*;
 import java.awt.*;
@@ -7,8 +7,9 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.InetAddress;
 
+
 public class ClientWindow extends JFrame {
-    private static enum Mode{
+    private enum Mode{
         M_CONNECTED,
         M_DISCONNECTED
     }
@@ -23,7 +24,6 @@ public class ClientWindow extends JFrame {
         setLayout(new BorderLayout());
 
         ClientDrawer clientDrawer = new ClientDrawer();
-        clientDrawer.setVisible(false);
         JLabel lblIP = new JLabel("IP:");
         JTextField edtIP = new JTextField();
         int edtIPHeight = edtIP.getPreferredSize().height;
@@ -36,7 +36,7 @@ public class ClientWindow extends JFrame {
                     case M_DISCONNECTED:
                         try {
                             clientDrawer.connect(InetAddress.getByName(edtIP.getText()), port);
-                            clientDrawer.setVisible(true);
+                            clientDrawer.setActivated(true);
                             btnConnect.setText("Отключиться");
 
                             currentMode = Mode.M_CONNECTED;
@@ -48,7 +48,7 @@ public class ClientWindow extends JFrame {
                     case M_CONNECTED:
                         try {
                             clientDrawer.disconnect();
-                            clientDrawer.setVisible(false);
+                            clientDrawer.setActivated(false);
                             btnConnect.setText("Подключиться");
 
                             currentMode = Mode.M_DISCONNECTED;

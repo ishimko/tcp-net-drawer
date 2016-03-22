@@ -1,4 +1,4 @@
-package drawer_client;
+package tcp_net_drawer.drawer_client;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
 
+import tcp_net_drawer.drawer_protocol.Point;
+
 public class ClientDrawer extends JPanel {
     private Image image;
     private Graphics imageGraphics;
@@ -17,20 +19,25 @@ public class ClientDrawer extends JPanel {
     private HashMap<Integer, Point> remotePoints = new HashMap<>();
     private Color backgroundColor = Color.white;
     private ClientHandler clientHandler;
+    private boolean activated = false;
 
     public ClientDrawer() {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
-                processDot(new Point(e.getX(), e.getY()));
-                processEndLine();
+                if (activated) {
+                    processDot(new Point(e.getX(), e.getY()));
+                    processEndLine();
+                }
             }
         });
 
         addMouseMotionListener(new MouseAdapter() {
                                    @Override
                                    public void mouseDragged(MouseEvent e) {
-                                       processDot(new Point(e.getX(), e.getY()));
+                                       if (activated) {
+                                           processDot(new Point(e.getX(), e.getY()));
+                                       }
                                    }
                                }
         );
@@ -59,7 +66,7 @@ public class ClientDrawer extends JPanel {
 
         try {
             clientHandler.sendPoint(p);
-        } catch (IOException e){
+        } catch (IOException e) {
             System.err.println("Network error: " + e);
         }
 
@@ -79,7 +86,7 @@ public class ClientDrawer extends JPanel {
         repaint();
     }
 
-    synchronized void drawRemoteDot(Point p, int clientID){
+    synchronized void drawRemoteDot(Point p, int clientID) {
         if (remotePoints.containsKey(clientID)) {
             drawDot(p, remotePoints.get(clientID));
         } else {
@@ -87,20 +94,20 @@ public class ClientDrawer extends JPanel {
         }
     }
 
-    synchronized void endRemoteLine(int clientID){
+    synchronized void endRemoteLine(int clientID) {
         endLine(remotePoints.get(clientID));
     }
 
-    synchronized void endLine(Point p){
+    synchronized void endLine(Point p) {
         p.x = -1;
         p.y = -1;
     }
 
-    private void processEndLine(){
+    private void processEndLine() {
         endLine(localOldPoint);
         try {
             clientHandler.endLine();
-        } catch (IOException e){
+        } catch (IOException e) {
             System.err.println("Network error: " + e);
         }
     }
@@ -117,10 +124,16 @@ public class ClientDrawer extends JPanel {
     private void newImage(int width, int height) {
         image = createImage(width, height);
         imageGraphics = image.getGraphics();
+        clear();
+    }
+
+    private void clear() {
         Color previousColor = imageGraphics.getColor();
         imageGraphics.setColor(backgroundColor);
-        imageGraphics.fillRect(0, 0, width, height);
+        imageGraphics.fillRect(0, 0, getWidth(), getHeight());
         imageGraphics.setColor(previousColor);
+
+        repaint();
     }
 
     public void connect(InetAddress ip, int port) throws IOException {
@@ -128,7 +141,12 @@ public class ClientDrawer extends JPanel {
         new Thread(clientHandler).start();
     }
 
-    public void disconnect() throws IOException{
+    public void disconnect() throws IOException {
         clientHandler.stop();
+    }
+
+    public void setActivated(boolean activated) {
+        this.activated = activated;
+        clear();
     }
 }

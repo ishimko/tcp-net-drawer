@@ -1,5 +1,7 @@
-import drawer_server.ServerDrawer;
-import drawer_client.ClientWindow;
+package tcp_net_drawer;
+
+import tcp_net_drawer.drawer_server.ServerDrawer;
+import tcp_net_drawer.drawer_client.ClientWindow;
 
 import javax.swing.*;
 import java.io.IOException;
