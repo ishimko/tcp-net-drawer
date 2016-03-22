@@ -14,10 +14,10 @@ public class ClientWindow extends JFrame {
         M_DISCONNECTED
     }
 
-    static final int MIN_FRAME_WIDTH = 400;
-    static final int MIN_FRAME_HEIGHT = 300;
-    static final int EDT_IP_WIDTH = 100;
-    Mode currentMode = Mode.M_DISCONNECTED;
+    private static final int MIN_FRAME_WIDTH = 400;
+    private static final int MIN_FRAME_HEIGHT = 300;
+    private static final int EDT_IP_WIDTH = 100;
+    private Mode currentMode = Mode.M_DISCONNECTED;
 
     public ClientWindow(int port) {
         setTitle("Paint.NET");

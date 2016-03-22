@@ -65,7 +65,7 @@ class ClientHandler implements Runnable {
         sendPoint(new Point(-1, -1));
     }
 
-    public void stop() {
+    void stop() {
         stopped = true;
     }
 

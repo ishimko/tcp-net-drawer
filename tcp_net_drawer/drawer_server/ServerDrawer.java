@@ -55,7 +55,7 @@ public class ServerDrawer {
         }
     }
 
-    public synchronized void processClients(int[] dataToSend, int initiatorID) {
+    private synchronized void processClients(int[] dataToSend, int initiatorID) {
         ObjectOutputStream client;
 
         try {
@@ -90,7 +90,7 @@ public class ServerDrawer {
         System.out.println(getTime() + ": " + reprClient(connection) + ": " + msg);
     }
 
-    class ConnectionHandler extends Thread {
+    private class ConnectionHandler extends Thread {
         private Socket connection;
         private int clientID;
 

@@ -12,7 +12,7 @@ import java.util.*;
 
 import tcp_net_drawer.drawer_protocol.Point;
 
-public class ClientDrawer extends JPanel {
+class ClientDrawer extends JPanel {
     private Image image;
     private Graphics imageGraphics;
     private Point localOldPoint = new Point(-1, -1);
@@ -21,7 +21,7 @@ public class ClientDrawer extends JPanel {
     private ClientHandler clientHandler;
     private boolean activated = false;
 
-    public ClientDrawer() {
+    ClientDrawer() {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
@@ -72,7 +72,7 @@ public class ClientDrawer extends JPanel {
 
     }
 
-    synchronized void drawDot(Point newPoint, Point oldPoint) {
+    private synchronized void drawDot(Point newPoint, Point oldPoint) {
         if (oldPoint.x == -1) {
             oldPoint.x = newPoint.x;
             oldPoint.y = newPoint.y;
@@ -98,7 +98,7 @@ public class ClientDrawer extends JPanel {
         endLine(remotePoints.get(clientID));
     }
 
-    synchronized void endLine(Point p) {
+    private synchronized void endLine(Point p) {
         p.x = -1;
         p.y = -1;
     }
@@ -136,16 +136,16 @@ public class ClientDrawer extends JPanel {
         repaint();
     }
 
-    public void connect(InetAddress ip, int port) throws IOException {
+    void connect(InetAddress ip, int port) throws IOException {
         clientHandler = new ClientHandler(ip, this, port);
         new Thread(clientHandler).start();
     }
 
-    public void disconnect() throws IOException {
+    void disconnect() throws IOException {
         clientHandler.stop();
     }
 
-    public void setActivated(boolean activated) {
+    void setActivated(boolean activated) {
         this.activated = activated;
         clear();
     }
