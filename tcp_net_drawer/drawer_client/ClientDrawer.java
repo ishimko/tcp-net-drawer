@@ -53,7 +53,7 @@ class ClientDrawer extends JPanel {
                                      resizeImage(getWidth(), getHeight());
                                      if (clientHandler != null){
                                          try {
-                                             clientHandler.sendImageDimension(getWidth(), getHeight());
+                                             clientHandler.sendImageDimension(getDimension());
                                          } catch (IOException e){
                                              System.err.println("Network error: " + e);
 
@@ -66,16 +66,22 @@ class ClientDrawer extends JPanel {
     }
 
     synchronized void resizeImage(int width, int height){
-        Image tmpImage = image;
-
-        if (height > maxHeight || width > maxWidth) {
+        boolean newDimension = false;
+        if (height > maxHeight) {
             maxHeight = height;
-            maxWidth = width;
-
-            newImage(width, height);
-            imageGraphics.drawImage(tmpImage, 0, 0, null);
-            repaint();
+            newDimension = true;
         }
+        if (width > maxWidth) {
+            maxWidth = width;
+            newDimension = true;
+        }
+
+        if (newDimension){
+            Image tmpImage = image;
+            newImage(maxWidth, maxHeight);
+            imageGraphics.drawImage(tmpImage, 0, 0, null);
+        }
+        repaint();
     }
 
     private void processDot(Point p) {
@@ -156,13 +162,13 @@ class ClientDrawer extends JPanel {
     private void newImage(int width, int height) {
         image = createImage(width, height);
         imageGraphics = image.getGraphics();
-        clear();
+        clear(width, height);
     }
 
-    private void clear() {
+    private void clear(int width, int height) {
         Color previousColor = imageGraphics.getColor();
         imageGraphics.setColor(backgroundColor);
-        imageGraphics.fillRect(0, 0, getWidth(), getHeight());
+        imageGraphics.fillRect(0, 0, width, height);
         imageGraphics.setColor(previousColor);
 
         repaint();
@@ -179,6 +185,10 @@ class ClientDrawer extends JPanel {
 
     void setActivated(boolean activated) {
         this.activated = activated;
-        clear();
+        clear(getWidth(), getHeight());
+    }
+
+    public Dimension getDimension(){
+        return new Dimension(maxWidth, maxHeight);
     }
 }

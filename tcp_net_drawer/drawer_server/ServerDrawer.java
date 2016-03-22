@@ -1,8 +1,10 @@
 package tcp_net_drawer.drawer_server;
 
 import tcp_net_drawer.drawer_protocol.DrawerMessage;
+import tcp_net_drawer.drawer_protocol.Point;
 import tcp_net_drawer.drawer_protocol.RemotePoint;
 
+import java.awt.*;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -20,19 +22,20 @@ public class ServerDrawer {
     private ServerSocket serverSocket;
     private volatile HashMap<Integer, ObjectOutputStream> clients = new HashMap<>();
     private volatile List<RemotePoint> drawLog = new ArrayList<>();
+    private Dimension imageSize = new Dimension(0, 0);
 
     public ServerDrawer(int port) throws IOException {
         serverSocket = new ServerSocket(port);
     }
 
-    private synchronized void addPointToLog(RemotePoint p){
-        drawLog.add(p);
+    private synchronized void addPointToLog(Point p, int clientID) {
+        drawLog.add(new RemotePoint(p, clientID));
     }
 
     private synchronized int getNewKey() {
         int i;
-        for (i = 0; i < clients.size(); i++){
-            if (!clients.containsKey(i)){
+        for (i = 0; i < clients.size(); i++) {
+            if (!clients.containsKey(i)) {
                 return i;
             }
 
@@ -47,9 +50,17 @@ public class ServerDrawer {
     private synchronized int addClient(ObjectOutputStream client) throws IOException {
         int cliendID = getNewKey();
         clients.put(cliendID, client);
+        DrawerMessage message;
+
+        if (clients.size() > 1) {
+            message = new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, imageSize);
+            client.writeObject(message);
+            client.flush();
+        }
+
         RemotePoint[] points = new RemotePoint[drawLog.size()];
         drawLog.toArray(points);
-        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, points);
+        message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, points);
         client.writeObject(message);
         client.flush();
 
@@ -71,12 +82,15 @@ public class ServerDrawer {
         }
     }
 
-    private synchronized void processClients(RemotePoint point) {
+    private synchronized void sendDot(Point point, int initiatorID) {
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, new RemotePoint(point, initiatorID));
+        sendMessage(message, initiatorID);
+    }
+
+    private synchronized void sendMessage(DrawerMessage message, int initiatorID) {
         ObjectOutputStream client;
-        int initiatorID = point.clientID;
-        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, point);
         try {
-            for (Integer clientID: clients.keySet()) {
+            for (Integer clientID : clients.keySet()) {
                 if (clientID != initiatorID) {
                     client = clients.get(clientID);
                     client.writeObject(message);
@@ -88,21 +102,26 @@ public class ServerDrawer {
         }
     }
 
+    private synchronized void sendDimension(int initiatorID) {
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, imageSize);
+        sendMessage(message, initiatorID);
+    }
+
     private static String reprClient(Socket connection) {
         return connection.getInetAddress().getHostAddress() + ":" + connection.getPort();
     }
 
-    private static String getTime(){
+    private static String getTime() {
         Calendar c = Calendar.getInstance();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
         return sdf.format(c.getTime());
     }
 
-    private static void writeLog(String msg){
+    private static void writeLog(String msg) {
         System.out.println(getTime() + ": " + msg);
     }
 
-    private static void writeLog(Socket connection, String msg){
+    private static void writeLog(Socket connection, String msg) {
         System.out.println(getTime() + ": " + reprClient(connection) + ": " + msg);
     }
 
@@ -116,14 +135,33 @@ public class ServerDrawer {
             writeLog(connection, "connected");
         }
 
-        private void processMessage(DrawerMessage message){
-            switch (message.messageType){
+        private void processMessage(DrawerMessage message) {
+            switch (message.messageType) {
                 case MSG_IMAGE_SIZE:
+                    Dimension d = (Dimension) message.messageBody;
+
+                    boolean newDimension = false;
+
+                    if (d.height > imageSize.height){
+                        imageSize.height = d.height;
+                        newDimension = true;
+                    }
+
+                    if (d.getWidth() > imageSize.width){
+                        imageSize.width = d.width;
+                        newDimension = true;
+                    }
+
+                    if (newDimension){
+                        sendDimension(clientID);
+                    }
+
+
                     break;
                 case MSG_POINT:
-                    RemotePoint point = (RemotePoint)message.messageBody;
-                    addPointToLog(point);
-                    processClients(point);
+                    Point point = (Point) message.messageBody;
+                    addPointToLog(point, clientID);
+                    sendDot(point, clientID);
                     break;
                 default:
                     writeLog("unknown messageBody received");
@@ -133,9 +171,15 @@ public class ServerDrawer {
         @Override
         public void run() {
             try {
+//                synchronized (this) {
+//                    if (clients.size() > 1) {
+//                        clients.get(clientID).writeObject(new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, imageSize));
+//                        System.out.println("dimension send");
+//                    }
+//                }
                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
                 while (true) {
-                    processMessage((DrawerMessage)in.readObject());
+                    processMessage((DrawerMessage) in.readObject());
                 }
             } catch (EOFException e) {
                 removeClient(clientID);
