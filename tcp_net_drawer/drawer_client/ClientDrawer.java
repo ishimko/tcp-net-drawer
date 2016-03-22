@@ -8,9 +8,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.rmi.Remote;
 import java.util.*;
 
+import tcp_net_drawer.drawer_protocol.DrawerMessage;
 import tcp_net_drawer.drawer_protocol.Point;
+import tcp_net_drawer.drawer_protocol.RemotePoint;
 
 class ClientDrawer extends JPanel {
     private Image image;
@@ -20,6 +23,8 @@ class ClientDrawer extends JPanel {
     private Color backgroundColor = Color.white;
     private ClientHandler clientHandler;
     private boolean activated = false;
+    private int maxHeight;
+    private int maxWidth;
 
     ClientDrawer() {
         addMouseListener(new MouseAdapter() {
@@ -44,21 +49,33 @@ class ClientDrawer extends JPanel {
 
         addComponentListener(new ComponentAdapter() {
                                  @Override
-                                 public void componentResized(ComponentEvent e) {
-                                     Image tmpImage = image;
+                                 public void componentResized(ComponentEvent event) {
+                                     resizeImage(getWidth(), getHeight());
+                                     if (clientHandler != null){
+                                         try {
+                                             clientHandler.sendImageDimension(getWidth(), getHeight());
+                                         } catch (IOException e){
+                                             System.err.println("Network error: " + e);
 
-                                     int height = getHeight();
-                                     int width = getWidth();
-
-                                     if (height > 0 && width > 0) {
-                                         newImage(width, height);
-                                         imageGraphics.drawImage(tmpImage, 0, 0, null);
-                                         repaint();
+                                         }
                                      }
                                  }
                              }
 
         );
+    }
+
+    synchronized void resizeImage(int width, int height){
+        Image tmpImage = image;
+
+        if (height > maxHeight || width > maxWidth) {
+            maxHeight = height;
+            maxWidth = width;
+
+            newImage(width, height);
+            imageGraphics.drawImage(tmpImage, 0, 0, null);
+            repaint();
+        }
     }
 
     private void processDot(Point p) {
@@ -86,12 +103,27 @@ class ClientDrawer extends JPanel {
         repaint();
     }
 
-    synchronized void drawRemoteDot(Point p, int clientID) {
-        if (remotePoints.containsKey(clientID)) {
-            drawDot(p, remotePoints.get(clientID));
+    synchronized void drawRemoteDot(RemotePoint p) {
+        if (remotePoints.containsKey(p.clientID)) {
+            drawDot(p.point, remotePoints.get(p.clientID));
         } else {
-            remotePoints.put(clientID, p);
+            remotePoints.put(p.clientID, p.point);
         }
+    }
+
+    synchronized void processRemoteDot(RemotePoint p){
+        if (p.point.x == -1 || p.point.y == -1){
+            endRemoteLine(p.clientID);
+        } else {
+            drawRemoteDot(p);
+        }
+    }
+
+    synchronized void processDotsList(RemotePoint[] pointsList){
+        for (RemotePoint p: pointsList){
+            processRemoteDot(p);
+        }
+
     }
 
     synchronized void endRemoteLine(int clientID) {

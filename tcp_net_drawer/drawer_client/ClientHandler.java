@@ -1,7 +1,10 @@
 package tcp_net_drawer.drawer_client;
 
+import tcp_net_drawer.drawer_protocol.DrawerMessage;
 import tcp_net_drawer.drawer_protocol.Point;
+import tcp_net_drawer.drawer_protocol.RemotePoint;
 
+import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -28,18 +31,8 @@ class ClientHandler implements Runnable {
     public void run() {
         while (!stopped) {
             try {
-                int[] readData;
-                readData = (int[]) in.readObject();
-                int clientID = readData[0];
-                Point readPoint = new Point(readData[1], readData[2]);
-
-                if (readPoint.x == -1) {
-                    drawer.endRemoteLine(clientID);
-                } else {
-                    drawer.drawRemoteDot(readPoint, clientID);
-                }
+                processMessage((DrawerMessage)in.readObject());
             } catch (SocketTimeoutException e) {
-                System.out.println(stopped);
             } catch (IOException e) {
                 System.err.println("IOError: " + e);
                 stop();
@@ -55,9 +48,28 @@ class ClientHandler implements Runnable {
 
     }
 
+    void processMessage(DrawerMessage drawerMessage){
+        switch (drawerMessage.messageType){
+            case MSG_IMAGE_SIZE:
+                Dimension d = (Dimension)drawerMessage.messageBody;
+                drawer.resizeImage(d.width, d.height);
+                break;
+            case MSG_REMOTE_POINTS_LIST:
+                drawer.processDotsList((RemotePoint[])drawerMessage.messageBody);
+                break;
+            default:
+                System.err.println("unknown messageBody received");
+        }
+    }
+
     void sendPoint(Point p) throws IOException {
-        int[] dataToSend = {p.x, p.y};
-        out.writeObject(dataToSend);
+        out.writeObject(new DrawerMessage(DrawerMessage.MessageType.MSG_POINT, p));
+        out.flush();
+    }
+
+    void sendImageDimension(int width, int height) throws IOException{
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_IMAGE_SIZE, new Dimension(width, height));
+        out.writeObject(message);
         out.flush();
     }
 

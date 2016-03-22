@@ -1,5 +1,8 @@
 package tcp_net_drawer.drawer_server;
 
+import tcp_net_drawer.drawer_protocol.DrawerMessage;
+import tcp_net_drawer.drawer_protocol.RemotePoint;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -8,18 +11,25 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 
 public class ServerDrawer {
     private ServerSocket serverSocket;
     private volatile HashMap<Integer, ObjectOutputStream> clients = new HashMap<>();
+    private volatile List<RemotePoint> drawLog = new ArrayList<>();
 
     public ServerDrawer(int port) throws IOException {
         serverSocket = new ServerSocket(port);
     }
 
-    private int getNewKey() {
+    private synchronized void addPointToLog(RemotePoint p){
+        drawLog.add(p);
+    }
+
+    private synchronized int getNewKey() {
         int i;
         for (i = 0; i < clients.size(); i++){
             if (!clients.containsKey(i)){
@@ -34,9 +44,15 @@ public class ServerDrawer {
         clients.remove(clientID);
     }
 
-    private synchronized int addClient(ObjectOutputStream client) {
+    private synchronized int addClient(ObjectOutputStream client) throws IOException {
         int cliendID = getNewKey();
         clients.put(cliendID, client);
+        RemotePoint[] points = new RemotePoint[drawLog.size()];
+        drawLog.toArray(points);
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, points);
+        client.writeObject(message);
+        client.flush();
+
         return cliendID;
     }
 
@@ -49,21 +65,21 @@ public class ServerDrawer {
                 int newClientID = addClient(new ObjectOutputStream(connection.getOutputStream()));
                 new ConnectionHandler(connection, newClientID).start();
             } catch (IOException e) {
-                System.err.println("Error starting connection handler" + e);
+                System.err.println("Error while adding client" + e);
 
             }
         }
     }
 
-    private synchronized void processClients(int[] dataToSend, int initiatorID) {
+    private synchronized void processClients(RemotePoint point) {
         ObjectOutputStream client;
-
+        int initiatorID = point.clientID;
+        DrawerMessage message = new DrawerMessage(DrawerMessage.MessageType.MSG_REMOTE_POINTS_LIST, point);
         try {
             for (Integer clientID: clients.keySet()) {
                 if (clientID != initiatorID) {
-                    int[] buf = {initiatorID, dataToSend[0], dataToSend[1]};
                     client = clients.get(clientID);
-                    client.writeObject(buf);
+                    client.writeObject(message);
                     client.flush();
                 }
             }
@@ -100,13 +116,26 @@ public class ServerDrawer {
             writeLog(connection, "connected");
         }
 
+        private void processMessage(DrawerMessage message){
+            switch (message.messageType){
+                case MSG_IMAGE_SIZE:
+                    break;
+                case MSG_POINT:
+                    RemotePoint point = (RemotePoint)message.messageBody;
+                    addPointToLog(point);
+                    processClients(point);
+                    break;
+                default:
+                    writeLog("unknown messageBody received");
+            }
+        }
+
         @Override
         public void run() {
             try {
                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
                 while (true) {
-                    int[] readData = (int[]) in.readObject();
-                    processClients(readData, clientID);
+                    processMessage((DrawerMessage)in.readObject());
                 }
             } catch (EOFException e) {
                 removeClient(clientID);
